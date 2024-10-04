@@ -2,39 +2,41 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Image, Alert } from "react-native";
 import { Button } from "react-native-paper";
 import { auth } from "../../firebase/firebase";
-import { uploadImage, pickImage } from "../../utils/uploadImage";
 import tw from "twrnc";
 import * as SecureStore from "expo-secure-store";
-
+import * as ImagePicker from "expo-image-picker";
+import { Camera } from "expo-camera";
+import * as ImageManipulator from "expo-image-manipulator";
+// TODO: adicionar a conexão com o Firebase
 const Perfil = ({ navigation }) => {
-  const [profileImage, setProfileImage] = useState(null);
   const [user, setUser] = useState(null);
+  const [image, setImage] = useState(null);
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      setUser(currentUser);
-      setProfileImage(currentUser.photoURL);
-    }
-  }, []);
-
-  const handlePickImage = async () => {
-    const uri = await pickImage();
-    console.log("Imagem selecionada URI:", uri);
-    if (uri) {
-      try {
-        const downloadURL = await uploadImage(uri, user.uid);
-        console.log("Imagem carregada URL:", downloadURL);
-        setProfileImage(downloadURL);
-        await user.updateProfile({ photoURL: downloadURL });
-        console.log("Perfil atualizado com URL da imagem:", downloadURL);
-        Alert.alert("Sucesso", "Foto de perfil atualizada!");
-      } catch (error) {
-        Alert.alert("Erro", "Falha ao fazer upload da imagem.");
-        console.error("Erro ao fazer upload da imagem:", error);
+    const fetchUser = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        setUser(currentUser);
       }
-    }
-  };
+    };
+
+    fetchUser();
+
+    (async () => {
+      const cameraStatus = await Camera.requestCameraPermissionsAsync();
+      const galleryStatus =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (
+        cameraStatus.status !== "granted" ||
+        galleryStatus.status !== "granted"
+      ) {
+        Alert.alert(
+          "Permissão necessária",
+          "Precisamos de permissão para acessar a câmera e a galeria."
+        );
+      }
+    })();
+  }, []);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -42,24 +44,58 @@ const Perfil = ({ navigation }) => {
     navigation.navigate("Login");
   };
 
+  const manipulateImage = async (uri) => {
+    if (typeof uri !== "string") {
+      throw new TypeError("The uri argument must be a string");
+    }
+    const manipulatedImage = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 300, height: 300 } }],
+      { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+    );
+    return manipulatedImage.uri;
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const resizedUri = await manipulateImage(result.assets[0].uri);
+      setImage(resizedUri);
+    }
+  };
+
+  const takePhoto = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const resizedUri = await manipulateImage(result.assets[0].uri);
+      setImage(resizedUri);
+    }
+  };
+
   return (
     <View style={tw`flex-1 justify-center items-center p-5`}>
       <Text style={tw`text-3xl font-bold mb-5 text-orange-500`}>
         Perfil do Usuário
       </Text>
+      {image && (
+        <Image
+          source={{ uri: image }}
+          style={tw`w-40 h-40 rounded-full mb-5`}
+        />
+      )}
       {user ? (
         <>
-          {profileImage ? (
-            <Image
-              source={{ uri: profileImage }}
-              style={tw`w-24 h-24 rounded-full mb-4`}
-            />
-          ) : (
-            <Text style={tw`text-xl mb-4`}>Nenhuma foto de perfil</Text>
-          )}
-          <Button mode="contained" onPress={handlePickImage}>
-            Alterar Foto de Perfil
-          </Button>
           <Text style={tw`text-xl mb-2`}>
             Nome: {user.displayName || "N/A"}
           </Text>
@@ -75,13 +111,14 @@ const Perfil = ({ navigation }) => {
           </Button>
         </>
       ) : (
-        <>
-          <Text style={tw`text-xl mb-4`}>Nenhum usuário logado</Text>
-          <Button mode="contained" onPress={() => navigation.navigate("Login")}>
-            Fazer Login
-          </Button>
-        </>
+        <Text style={tw`text-xl mb-2`}>Carregando...</Text>
       )}
+      <Button mode="contained" onPress={takePhoto} style={tw`mt-5`}>
+        Tirar Foto
+      </Button>
+      <Button mode="contained" onPress={pickImage} style={tw`mt-2`}>
+        Selecionar da Galeria
+      </Button>
     </View>
   );
 };
