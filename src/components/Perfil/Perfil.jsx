@@ -13,8 +13,8 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { doc, setDoc } from "firebase/firestore";
-import { ref as dbRef, set } from "firebase/database";
+import { doc, getDoc } from "firebase/firestore";
+import { ref as dbRef, get } from "firebase/database";
 import { updateProfile } from "firebase/auth";
 
 const Perfil = ({ navigation }) => {
@@ -26,6 +26,7 @@ const Perfil = ({ navigation }) => {
       const currentUser = auth.currentUser;
       if (currentUser) {
         setUser(currentUser);
+        await loadProfileImage(currentUser);
       }
     };
 
@@ -46,6 +47,28 @@ const Perfil = ({ navigation }) => {
       }
     })();
   }, []);
+
+  const loadProfileImage = async (currentUser) => {
+    try {
+      const userDocRef = doc(firestore, "users", currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists() && userDoc.data().photoURL) {
+        setImage(userDoc.data().photoURL);
+        return;
+      }
+      const userDbRef = dbRef(realtimeDatabase, `users/${currentUser.uid}`);
+      const userDbSnapshot = await get(userDbRef);
+      if (userDbSnapshot.exists() && userDbSnapshot.val().photoURL) {
+        setImage(userDbSnapshot.val().photoURL);
+        return;
+      }
+      if (currentUser.photoURL) {
+        setImage(currentUser.photoURL);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar a imagem do perfil:", error);
+    }
+  };
 
   const handleLogout = async () => {
     await auth.signOut();
