@@ -14,6 +14,7 @@ import theme from "./src/theme";
 import { PaperProvider } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 import * as Network from "expo-network";
+import GerenciarNotificacoes from "./src/components/GerenciarNotificacoes/GerenciarNotificacoes";
 
 const Stack = createStackNavigator();
 
@@ -74,10 +75,14 @@ export default function App() {
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Cadastro" component={Cadastro} />
           <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="DetalheReceita" component={DetalhesReceita} />
+          <Stack.Screen name="DetalhesReceita" component={DetalhesReceita} />
           <Stack.Screen name="Perfil" component={Perfil} />
           <Stack.Screen name="AtualizarPerfil" component={AtualizarPerfil} />
           <Stack.Screen name="Configuracao" component={Configuracao} />
+          <Stack.Screen
+            name="GerenciarNotificacoes"
+            component={GerenciarNotificacoes}
+          />
         </Stack.Navigator>
         <StatusBar style="auto" />
       </NavigationContainer>

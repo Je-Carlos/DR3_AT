@@ -1,18 +1,23 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
+  Text,
   FlatList,
-  ActivityIndicator,
+  Image,
   TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
-import { Text, TextInput, Button } from "react-native-paper";
 import axios from "axios";
 import tw from "twrnc";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function Home({ navigation }) {
+const Home = () => {
   const [receitas, setReceitas] = useState([]);
-  const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchReceitas = async () => {
@@ -31,66 +36,77 @@ export default function Home({ navigation }) {
     fetchReceitas();
   }, []);
 
-  const filtrarReceitas = (text) => {
-    setBusca(text);
-    if (text) {
-      const receitasFiltradas = receitas.filter((receita) =>
-        receita.strMeal.toLowerCase().includes(text.toLowerCase())
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `https://www.themealdb.com/api/json/v1/1/search.php?s=${search}`
       );
-      setReceitas(receitasFiltradas);
-    } else {
-      setLoading(true);
-      axios
-        .get("https://www.themealdb.com/api/json/v1/1/search.php?s=")
-        .then((response) => {
-          setReceitas(response.data.meals || []);
-          setLoading(false);
-        });
+      setReceitas(response.data.meals || []);
+      setLoading(false);
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
     }
   };
 
+  const renderReceita = ({ item }) => (
+    <TouchableOpacity
+      style={tw`w-1/2 p-2`}
+      onPress={() => navigation.navigate("DetalhesReceita", { receita: item })}
+    >
+      <View style={tw`bg-white rounded-lg overflow-hidden shadow-lg`}>
+        <Image source={{ uri: item.strMealThumb }} style={tw`w-full h-40`} />
+        <Text style={tw`p-2 text-lg font-bold text-center`}>
+          {item.strMeal}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={tw`flex-1 justify-center items-center p-5`}>
-      <Text style={tw`text-2xl font-bold mb-5`}>Receitas Deliciosas</Text>
-      <TextInput
-        style={tw`border p-2 mb-4 w-full`}
-        placeholder="Buscar Receita"
-        value={busca}
-        onChangeText={(text) => filtrarReceitas(text)}
-        mode="outlined"
-      />
+    <View style={tw`flex-1 p-4 bg-gray-100`}>
+      <View style={tw`flex-row justify-between items-center mb-5`}>
+        <Text style={tw`text-3xl font-bold text-orange-500`}>Dev.Receitas</Text>
+        <View style={tw`flex-row`}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Perfil")}
+            style={tw`mr-4`}
+          >
+            <Ionicons name="person-circle-outline" size={30} color="orange" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Configuracao")}>
+            <Ionicons name="settings-outline" size={30} color="orange" />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={tw`flex-row mb-5`}>
+        <TextInput
+          style={tw`flex-1 p-2 border border-gray-300 rounded-lg`}
+          placeholder="Pesquisar receitas..."
+          value={search}
+          onChangeText={setSearch}
+        />
+        <TouchableOpacity
+          style={tw`ml-2 p-2 bg-orange-500 rounded-lg`}
+          onPress={handleSearch}
+        >
+          <Text style={tw`text-white`}>Buscar</Text>
+        </TouchableOpacity>
+      </View>
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#FFA500" />
       ) : (
         <FlatList
           data={receitas}
+          renderItem={renderReceita}
           keyExtractor={(item) => item.idMeal}
-          renderItem={({ item }) =>
-            item ? (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("DetalheReceita", { idMeal: item.idMeal })
-                }
-              >
-                <Text
-                  style={tw`bg-gray-200 p-3 my-2 rounded w-full text-center`}
-                >
-                  {item.strMeal}
-                </Text>
-              </TouchableOpacity>
-            ) : null
-          }
+          numColumns={2}
+          columnWrapperStyle={tw`justify-between`}
         />
       )}
-      <Button mode="contained" onPress={() => navigation.navigate("Perfil")}>
-        Perfil
-      </Button>
-      <Button
-        mode="contained"
-        onPress={() => navigation.navigate("Configuracao")}
-      >
-        Configurações
-      </Button>
     </View>
   );
-}
+};
+
+export default Home;
