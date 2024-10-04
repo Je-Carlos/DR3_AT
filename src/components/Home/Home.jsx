@@ -20,7 +20,7 @@ export default function Home({ navigation }) {
         const response = await axios.get(
           "https://www.themealdb.com/api/json/v1/1/search.php?s="
         );
-        setReceitas(response.data.meals);
+        setReceitas(response.data.meals || []);
         setLoading(false);
       } catch (error) {
         console.error(error);
@@ -43,7 +43,7 @@ export default function Home({ navigation }) {
       axios
         .get("https://www.themealdb.com/api/json/v1/1/search.php?s=")
         .then((response) => {
-          setReceitas(response.data.meals);
+          setReceitas(response.data.meals || []);
           setLoading(false);
         });
     }
@@ -65,17 +65,21 @@ export default function Home({ navigation }) {
         <FlatList
           data={receitas}
           keyExtractor={(item) => item.idMeal}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("DetalheReceita", { idMeal: item.idMeal })
-              }
-            >
-              <Text style={tw`bg-gray-200 p-3 my-2 rounded w-full text-center`}>
-                {item.strMeal}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) =>
+            item ? (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("DetalheReceita", { idMeal: item.idMeal })
+                }
+              >
+                <Text
+                  style={tw`bg-gray-200 p-3 my-2 rounded w-full text-center`}
+                >
+                  {item.strMeal}
+                </Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
       <Button mode="contained" onPress={() => navigation.navigate("Perfil")}>

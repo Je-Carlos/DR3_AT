@@ -5,6 +5,7 @@ import { auth } from "../../firebase/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import tw from "twrnc";
 import EsqueciSenha from "../EsqueciSenha/EsqueciSenha";
+import * as SecureStore from "expo-secure-store";
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -13,7 +14,11 @@ const Login = ({ navigation }) => {
 
   const handleLogin = () => {
     signInWithEmailAndPassword(auth, email, senha)
-      .then((userCredential) => {
+      .then(async (userCredential) => {
+        await SecureStore.setItemAsync(
+          "userSession",
+          JSON.stringify(userCredential.user)
+        );
         navigation.navigate("Home");
       })
       .catch((error) => {

@@ -1,6 +1,12 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+} from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCOcWwqKKdfWwAQ1M3vW6iAOvGX6uZSOCA",
@@ -12,7 +18,19 @@ const firebaseConfig = {
   measurementId: "G-RK6DVYEFYJ",
 };
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth();
-export { auth, analytics, app };
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Inicializar o Auth apenas se ainda não estiver inicializado
+let auth;
+if (!getApps().length) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} else {
+  auth = getAuth(app);
+}
+
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+export { auth, app, db, storage };
