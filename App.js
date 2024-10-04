@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, ActivityIndicator } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
 import Home from "./src/components/Home/Home";
 import Login from "./src/components/Login/Login";
 import Cadastro from "./src/components/Cadastro/Cadastro";
@@ -10,18 +10,40 @@ import DetalhesReceita from "./src/components/DetalheReceita/DetalheReceita";
 import Perfil from "./src/components/Perfil/Perfil";
 import AtualizarPerfil from "./src/components/AtualizarPerfil/AtualizarPerfil";
 import Configuracao from "./src/components/Configuracao/Configuracao";
-import theme from "./src/theme";
-import { PaperProvider } from "react-native-paper";
+import GerenciarNotificacoes from "./src/components/GerenciarNotificacoes/GerenciarNotificacoes";
+import {
+  Provider as PaperProvider,
+  adaptNavigationTheme,
+} from "react-native-paper";
+import {
+  DarkTheme as PaperDarkTheme,
+  DefaultTheme as PaperDefaultTheme,
+} from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 import * as Network from "expo-network";
-import GerenciarNotificacoes from "./src/components/GerenciarNotificacoes/GerenciarNotificacoes";
+import {
+  DarkTheme as NavigationDarkTheme,
+  DefaultTheme as NavigationDefaultTheme,
+} from "@react-navigation/native";
+import NetInfo from "@react-native-community/netinfo";
+
+const { LightTheme: CombinedDefaultTheme, DarkTheme: CombinedDarkTheme } =
+  adaptNavigationTheme({
+    reactNavigationLight: NavigationDefaultTheme,
+    reactNavigationDark: NavigationDarkTheme,
+    materialLight: PaperDefaultTheme,
+    materialDark: PaperDarkTheme,
+  });
 
 const Stack = createStackNavigator();
 
-export default function App() {
+const Main = () => {
+  const { isDarkTheme } = useTheme();
+  const theme = isDarkTheme ? CombinedDarkTheme : CombinedDefaultTheme;
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState("Login");
   const [isConnected, setIsConnected] = useState(true);
+
   useEffect(() => {
     const checkUserSession = async () => {
       try {
@@ -33,22 +55,25 @@ export default function App() {
           }
         }
       } catch (error) {
-        console.error("Failed to load user session:", error);
+        console.error("Erro ao verificar a sessão do usuário:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    const checkNetworkConnection = async () => {
-      try {
-        const networkState = await Network.getNetworkStateAsync();
-        console.log("Estado da rede:", networkState);
-        setIsConnected(networkState.isConnected);
-      } catch (error) {
-        console.error("Erro ao verificar conexão de rede:", error);
-      }
+
+    const checkConnection = async () => {
+      const state = await NetInfo.fetch();
+      setIsConnected(state.isConnected);
     };
+
     checkUserSession();
-    checkNetworkConnection();
+    checkConnection();
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (isLoading) {
@@ -58,6 +83,7 @@ export default function App() {
       </View>
     );
   }
+
   if (!isConnected) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -70,7 +96,7 @@ export default function App() {
 
   return (
     <PaperProvider theme={theme}>
-      <NavigationContainer>
+      <NavigationContainer theme={theme}>
         <Stack.Navigator initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Cadastro" component={Cadastro} />
@@ -84,17 +110,25 @@ export default function App() {
             component={GerenciarNotificacoes}
           />
         </Stack.Navigator>
-        <StatusBar style="auto" />
       </NavigationContainer>
     </PaperProvider>
   );
-}
+};
+
+const App = () => {
+  return (
+    <ThemeProvider>
+      <Main />
+    </ThemeProvider>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
   },
 });
+
+export default App;

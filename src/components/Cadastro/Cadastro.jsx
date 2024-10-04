@@ -1,64 +1,101 @@
 import React, { useState } from "react";
-import { View, Alert } from "react-native";
+import { View, Alert, ActivityIndicator, StyleSheet } from "react-native";
 import { Text, TextInput, Button } from "react-native-paper";
 import { auth } from "../../firebase/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import tw from "twrnc";
+import * as SecureStore from "expo-secure-store";
 
 const Cadastro = ({ navigation }) => {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleCadastro = () => {
-    createUserWithEmailAndPassword(auth, email, senha)
-      .then((userCredential) => {
-        // Atualizar o perfil do usuário com o nome
-        updateProfile(userCredential.user, {
-          displayName: nome,
-        }).then(() => {
-          navigation.navigate("Home");
-        });
-      })
-      .catch((error) => {
-        Alert.alert("Erro", error.message);
-      });
+  const handleCadastro = async () => {
+    if (!nome || !email || !senha) {
+      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        senha
+      );
+      const user = userCredential.user;
+      await updateProfile(user, { displayName: nome });
+      await SecureStore.setItemAsync("userSession", JSON.stringify(user));
+      navigation.navigate("Home");
+    } catch (error) {
+      Alert.alert("Erro", "Falha no cadastro. Verifique suas informações.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={tw`flex-1 justify-center items-center p-5`}>
-      <Text style={tw`text-2xl font-bold mb-5`}>Cadastro</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Cadastro</Text>
       <TextInput
-        style={tw`border p-2 mb-4 w-full`}
-        placeholder="Nome"
+        label="Nome"
         value={nome}
         onChangeText={setNome}
-        mode="outlined"
+        style={styles.input}
       />
       <TextInput
-        style={tw`border p-2 mb-4 w-full`}
-        placeholder="Email"
-        keyboardType="email-address"
+        label="Email"
         value={email}
         onChangeText={setEmail}
-        mode="outlined"
+        style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
       <TextInput
-        style={tw`border p-2 mb-4 w-full`}
-        placeholder="Senha"
-        secureTextEntry
+        label="Senha"
         value={senha}
         onChangeText={setSenha}
-        mode="outlined"
+        style={styles.input}
+        secureTextEntry
       />
-      <Button mode="contained" onPress={handleCadastro}>
-        Cadastrar
-      </Button>
-      <Button mode="contained" onPress={() => navigation.goBack()}>
-        Voltar
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <Button mode="contained" onPress={handleCadastro} style={styles.button}>
+          Cadastrar
+        </Button>
+      )}
+      <Button onPress={() => navigation.navigate("Login")} style={styles.link}>
+        Já tem uma conta? Faça login
       </Button>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  input: {
+    marginBottom: 16,
+  },
+  button: {
+    marginBottom: 16,
+  },
+  link: {
+    marginBottom: 8,
+  },
+});
 
 export default Cadastro;

@@ -1,25 +1,34 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Image, Alert } from "react-native";
-import { Button } from "react-native-paper";
+import { View, Alert, StyleSheet } from "react-native";
+import {
+  Text,
+  Button,
+  Avatar,
+  useTheme,
+  ActivityIndicator,
+} from "react-native-paper";
 import {
   auth,
   storage,
   firestore,
   realtimeDatabase,
-} from "../../firebase/firebase";
-import tw from "twrnc";
+} from "../../firebase/firebase"; // Certifique-se de que o caminho está correto
 import * as SecureStore from "expo-secure-store";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { doc, getDoc } from "firebase/firestore";
-import { ref as dbRef, get } from "firebase/database";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { ref as dbRef, set, get } from "firebase/database";
 import { updateProfile } from "firebase/auth";
+import { useTheme as useAppTheme } from "../../context/ThemeContext"; // Certifique-se de que o caminho está correto
 
 const Perfil = ({ navigation }) => {
+  const { isDarkTheme } = useAppTheme();
+  const { colors } = useTheme();
   const [user, setUser] = useState(null);
   const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -28,6 +37,7 @@ const Perfil = ({ navigation }) => {
         setUser(currentUser);
         await loadProfileImage(currentUser);
       }
+      setLoading(false);
     };
 
     fetchUser();
@@ -56,12 +66,14 @@ const Perfil = ({ navigation }) => {
         setImage(userDoc.data().photoURL);
         return;
       }
+
       const userDbRef = dbRef(realtimeDatabase, `users/${currentUser.uid}`);
       const userDbSnapshot = await get(userDbRef);
       if (userDbSnapshot.exists() && userDbSnapshot.val().photoURL) {
         setImage(userDbSnapshot.val().photoURL);
         return;
       }
+
       if (currentUser.photoURL) {
         setImage(currentUser.photoURL);
       }
@@ -184,44 +196,86 @@ const Perfil = ({ navigation }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
-    <View style={tw`flex-1 justify-center items-center p-5`}>
-      <Text style={tw`text-3xl font-bold mb-5 text-orange-500`}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.primary }]}>
         Perfil do Usuário
       </Text>
-      {image && (
-        <Image
-          source={{ uri: image }}
-          style={tw`w-40 h-40 rounded-full mb-5`}
-        />
-      )}
+      <Avatar.Image
+        size={100}
+        source={image ? { uri: image } : require("../../../assets/avatar.png")}
+        style={styles.avatar}
+      />
+      <Button mode="contained" onPress={pickImage} style={styles.button}>
+        Selecionar da Galeria
+      </Button>
+      <Button mode="contained" onPress={takePhoto} style={styles.button}>
+        Tirar Foto
+      </Button>
       {user ? (
         <>
-          <Text style={tw`text-xl mb-2`}>
+          <Text style={[styles.infoText, { color: colors.text }]}>
             Nome: {user.displayName || "N/A"}
           </Text>
-          <Text style={tw`text-xl mb-2`}>Email: {user.email}</Text>
+          <Text style={[styles.infoText, { color: colors.text }]}>
+            Email: {user.email}
+          </Text>
           <Button
             mode="contained"
             onPress={() => navigation.navigate("AtualizarPerfil")}
+            style={styles.button}
           >
             Atualizar Perfil
           </Button>
-          <Button mode="contained" onPress={handleLogout}>
+          <Button mode="contained" onPress={handleLogout} style={styles.button}>
             Sair
           </Button>
         </>
       ) : (
-        <Text style={tw`text-xl mb-2`}>Carregando...</Text>
+        <Text style={[styles.infoText, { color: colors.text }]}>
+          Carregando...
+        </Text>
       )}
-      <Button mode="contained" onPress={takePhoto} style={tw`mt-5`}>
-        Tirar Foto
-      </Button>
-      <Button mode="contained" onPress={pickImage} style={tw`mt-2`}>
-        Selecionar da Galeria
-      </Button>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  avatar: {
+    marginBottom: 16,
+  },
+  button: {
+    marginBottom: 16,
+    width: "80%",
+  },
+  infoText: {
+    fontSize: 18,
+    marginBottom: 8,
+  },
+});
 
 export default Perfil;
