@@ -6,7 +6,7 @@ import {
   storage,
   firestore,
   realtimeDatabase,
-} from "../../firebase/firebase"; // Certifique-se de que o Firebase Storage, Firestore e Realtime Database estão configurados
+} from "../../firebase/firebase";
 import tw from "twrnc";
 import * as SecureStore from "expo-secure-store";
 import * as ImagePicker from "expo-image-picker";
@@ -15,7 +15,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { doc, setDoc } from "firebase/firestore";
 import { ref as dbRef, set } from "firebase/database";
-import { updateProfile } from "firebase/auth"; // Importa a função updateProfile corretamente
+import { updateProfile } from "firebase/auth";
 
 const Perfil = ({ navigation }) => {
   const [user, setUser] = useState(null);
