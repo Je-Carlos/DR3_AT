@@ -1,7 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-apply plugin: 'com.google.gms.google-services'
+
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 static def versionToNumber(major, minor, patch) {
@@ -193,7 +193,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-    classpath 'com.google.gms:google-services:4.3.10'
 }
 
 if (rnVersion < versionToNumber(0, 75, 0)) {
