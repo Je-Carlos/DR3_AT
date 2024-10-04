@@ -1,36 +1,23 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import {
-  getAuth,
-  initializeAuth,
-  getReactNativePersistence,
-} from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCOcWwqKKdfWwAQ1M3vW6iAOvGX6uZSOCA",
-  authDomain: "devreceitas-27edf.firebaseapp.com",
-  projectId: "devreceitas-27edf",
-  storageBucket: "devreceitas-27edf.appspot.com",
-  messagingSenderId: "732176179893",
-  appId: "1:732176179893:web:2580939595373d884e54fc",
-  measurementId: "G-RK6DVYEFYJ",
+  apiKey: "AIzaSyCeszxd5p-79PKW7xCA6gOKNgONcLdbHtM",
+  authDomain: "dr4tp3-ab9b4.firebaseapp.com",
+  databaseURL: "https://dr4tp3-ab9b4-default-rtdb.firebaseio.com",
+  projectId: "dr4tp3-ab9b4",
+  storageBucket: "dr4tp3-ab9b4.appspot.com",
+  messagingSenderId: "45878549251",
+  appId: "1:45878549251:web:5769beb037a2a08a5a2736",
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Inicializar o Auth apenas se ainda não estiver inicializado
-let auth;
-if (!getApps().length) {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-} else {
-  auth = getAuth(app);
-}
-
-const db = getFirestore(app);
+const auth = getAuth(app);
 const storage = getStorage(app);
+const firestore = getFirestore(app);
+const realtimeDatabase = getDatabase(app);
 
-export { auth, app, db, storage };
+export { auth, storage, firestore, realtimeDatabase };

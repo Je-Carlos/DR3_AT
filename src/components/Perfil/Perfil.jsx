@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Image, Alert } from "react-native";
 import { Button } from "react-native-paper";
-import { auth } from "../../firebase/firebase";
+import {
+  auth,
+  storage,
+  firestore,
+  realtimeDatabase,
+} from "../../firebase/firebase"; // Certifique-se de que o Firebase Storage, Firestore e Realtime Database estão configurados
 import tw from "twrnc";
 import * as SecureStore from "expo-secure-store";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
-// TODO: adicionar a conexão com o Firebase
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { doc, setDoc } from "firebase/firestore";
+import { ref as dbRef, set } from "firebase/database";
+import { updateProfile } from "firebase/auth"; // Importa a função updateProfile corretamente
+
 const Perfil = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [image, setImage] = useState(null);
@@ -56,30 +65,99 @@ const Perfil = ({ navigation }) => {
     return manipulatedImage.uri;
   };
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+  const uploadImage = async (uri) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `profilePictures/${user.uid}.png`);
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error("Erro ao fazer upload da imagem:", error);
+      Alert.alert(
+        "Erro",
+        `Não foi possível fazer upload da imagem. Por favor, tente novamente. Detalhes: ${error.message}`
+      );
+      throw error;
+    }
+  };
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const resizedUri = await manipulateImage(result.assets[0].uri);
-      setImage(resizedUri);
+  const saveImageUrl = async (url) => {
+    try {
+      const userDocRef = doc(firestore, "users", user.uid);
+      await setDoc(userDocRef, { photoURL: url }, { merge: true });
+
+      const userDbRef = dbRef(realtimeDatabase, `users/${user.uid}`);
+      await set(userDbRef, { photoURL: url });
+    } catch (error) {
+      console.error("Erro ao salvar a URL da imagem:", error);
+      Alert.alert(
+        "Erro",
+        `Não foi possível salvar a URL da imagem. Por favor, tente novamente. Detalhes: ${error.message}`
+      );
+      throw error;
+    }
+  };
+
+  const updateProfilePhoto = async (url) => {
+    if (user) {
+      try {
+        await updateProfile(user, { photoURL: url });
+      } catch (error) {
+        console.error("Erro ao atualizar o perfil do usuário:", error);
+        Alert.alert(
+          "Erro",
+          `Não foi possível atualizar o perfil do usuário. Por favor, tente novamente. Detalhes: ${error.message}`
+        );
+      }
+    } else {
+      console.error("Usuário não autenticado.");
+      Alert.alert(
+        "Erro",
+        "Usuário não autenticado. Por favor, faça login novamente."
+      );
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const resizedUri = await manipulateImage(result.assets[0].uri);
+        const downloadURL = await uploadImage(resizedUri);
+        setImage(downloadURL);
+        await updateProfilePhoto(downloadURL);
+        await saveImageUrl(downloadURL);
+      }
+    } catch (error) {
+      console.error("Erro ao selecionar a imagem:", error);
     }
   };
 
   const takePhoto = async () => {
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+    try {
+      let result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const resizedUri = await manipulateImage(result.assets[0].uri);
-      setImage(resizedUri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const resizedUri = await manipulateImage(result.assets[0].uri);
+        const downloadURL = await uploadImage(resizedUri);
+        setImage(downloadURL);
+        await updateProfilePhoto(downloadURL);
+        await saveImageUrl(downloadURL);
+      }
+    } catch (error) {
+      console.error("Erro ao tirar a foto:", error);
     }
   };
 
